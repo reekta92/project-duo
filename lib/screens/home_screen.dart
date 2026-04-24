@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'settings_screen.dart';
-import 'game_screen.dart';
-import 'progress_screen.dart';
+import '../constants/constants.dart';
+import '../routes/app_routes.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -10,72 +9,67 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ana Menü'),
+        title: const Text(AppStrings.mainMenu),
         centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-            },
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
           ),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(AppDimensions.paddingPage),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.school, size: 120, color: Colors.blueAccent),
-            const SizedBox(height: 30),
-            const Text(
-              'Hoş Geldin!',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            const Icon(
+              Icons.school,
+              size: AppDimensions.iconXl,
+              color: AppColors.seed,
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppDimensions.spacing2xl),
             const Text(
-              'Hangi modüle gitmek istersin?',
+              AppStrings.welcome,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: TextStyle(
+                fontSize: AppDimensions.fontHeading,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            const SizedBox(height: 40),
-
+            const SizedBox(height: AppDimensions.spacingSm),
+            const Text(
+              AppStrings.whichModule,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: AppDimensions.fontSubtitle,
+                color: AppColors.grey,
+              ),
+            ),
+            const SizedBox(height: AppDimensions.spacing3xl),
             _buildMenuButton(
               context,
-              'Oyuna Başla',
+              AppStrings.startGame,
               Icons.play_arrow,
-              Colors.green,
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const GameScreen()),
-              ),
+              AppColors.green,
+              AppRoutes.game,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppDimensions.spacingLg),
             _buildMenuButton(
               context,
-              'Gelişimim',
+              AppStrings.myProgress,
               Icons.trending_up,
-              Colors.orange,
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProgressScreen()),
-              ),
+              AppColors.orange,
+              AppRoutes.progress,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppDimensions.spacingLg),
             _buildMenuButton(
               context,
-              'Ayarlar',
+              AppStrings.settings,
               Icons.settings,
-              Colors.blue,
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              ),
+              AppColors.blue,
+              AppRoutes.settings,
             ),
           ],
         ),
@@ -88,18 +82,25 @@ class HomeScreen extends StatelessWidget {
     String title,
     IconData icon,
     Color color,
-    VoidCallback onPressed,
+    String route,
   ) {
     return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 28),
-      label: Text(title, style: const TextStyle(fontSize: 20)),
+      onPressed: () => Navigator.pushNamed(context, route),
+      icon: Icon(icon, size: AppDimensions.iconMenu),
+      label: Text(
+        title,
+        style: const TextStyle(fontSize: AppDimensions.fontBody),
+      ),
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 15),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        elevation: 4,
+        foregroundColor: AppColors.white,
+        padding: const EdgeInsets.symmetric(
+          vertical: AppDimensions.spacingMd - 1,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+        ),
+        elevation: AppDimensions.elevationButtonHigh,
       ),
     );
   }

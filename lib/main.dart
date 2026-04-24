@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/login_screen.dart';
+import 'constants/constants.dart';
+import 'routes/app_routes.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await dotenv.load(fileName: '.env');
+
   await Supabase.initialize(
-    url: 'https://oinvnrtqwerxxzextqhi.supabase.co',
-    anonKey: 'sb_publishable_oWIdTWsd58zuRZdowA-H-g_Gkshd8sc',
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
   runApp(const VocabGameApp());
@@ -19,13 +23,14 @@ class VocabGameApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '6 Sefer Kelime Oyunu',
+      title: AppStrings.appTitle,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.seed),
         useMaterial3: true,
       ),
-      home: const LoginScreen(),
+      initialRoute: AppRoutes.login,
+      routes: AppRoutes.routes,
     );
   }
 }
