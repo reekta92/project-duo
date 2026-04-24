@@ -29,7 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (user == null) return;
 
       final data = await supabase
-          .from('profiles')
+          .from('Users')
           .select()
           .eq('id', user.id)
           .single();
@@ -56,7 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (newTarget == null) throw 'Lütfen geçerli bir hedef sayı giriniz.';
 
       await supabase
-          .from('profiles')
+          .from('Users')
           .update({
             'username': _usernameController.text.trim(),
             'daily_target': newTarget,

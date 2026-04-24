@@ -25,7 +25,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
       if (res.user != null) {
         // Kayıt sonrası profil tablosuna kullanıcı adını ekle
-        await supabase.from('profiles').insert({
+        await supabase.from('Users').insert({
           'id': res.user!.id,
           'username': _usernameController.text.trim(),
           'daily_target': 10,
