@@ -26,7 +26,6 @@ class VocabGameApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const LoginScreen(),
-
     );
   }
 }
