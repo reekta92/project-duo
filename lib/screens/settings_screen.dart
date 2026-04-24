@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'login_screen.dart';
+import '../constants/constants.dart';
+import '../routes/app_routes.dart';
+import '../services/auth_service.dart';
+import '../services/user_service.dart';
+import '../utils/snackbar_helper.dart';
+import '../utils/validators.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -10,11 +14,10 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final supabase = Supabase.instance.client;
   final _targetController = TextEditingController();
   final _usernameController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
-  Map<String, dynamic>? _profileData;
 
   @override
   void initState() {
@@ -25,68 +28,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadUserData() async {
     setState(() => _isLoading = true);
     try {
-      final user = supabase.auth.currentUser;
+      final user = AuthService.currentUser;
       if (user == null) return;
 
-      final data = await supabase
-          .from('Users')
-          .select()
-          .eq('id', user.id)
-          .single();
+      final profile = await UserService.getProfile(user.id);
 
       setState(() {
-        _profileData = data;
-        _targetController.text = data['daily_target']?.toString() ?? '10';
-        _usernameController.text = data['username']?.toString() ?? '';
+        _targetController.text = profile.dailyTarget.toString();
+        _usernameController.text = profile.username;
       });
     } catch (e) {
       debugPrint('Veri yüklenirken hata oluştu: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _updateProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isLoading = true);
     try {
-      final user = supabase.auth.currentUser;
-      if (user == null) throw 'Kullanıcı oturumu bulunamadı.';
+      final user = AuthService.currentUser;
+      if (user == null) throw Exception('Kullanıcı oturumu bulunamadı.');
 
-      final newTarget = int.tryParse(_targetController.text.trim());
-      if (newTarget == null) throw 'Lütfen geçerli bir hedef sayı giriniz.';
+      final newTarget = int.parse(_targetController.text.trim());
 
-      await supabase
-          .from('Users')
-          .update({
-            'username': _usernameController.text.trim(),
-            'daily_target': newTarget,
-          })
-          .eq('id', user.id);
+      await UserService.updateProfile(
+        userId: user.id,
+        username: _usernameController.text.trim(),
+        dailyTarget: newTarget,
+      );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil başarıyla güncellendi!')),
-      );
+      SnackbarHelper.showSuccess(context, AppStrings.profileUpdated);
       _loadUserData();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Güncelleme Hatası: $e')));
+      SnackbarHelper.showError(context, 'Güncelleme Hatası: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _signOut() async {
-    await supabase.auth.signOut();
+    await AuthService.signOut();
     if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => LoginScreen(),
-      ), // LoginScreen import edilmeli
-      (route) => false,
-    );
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
   }
 
   @override
@@ -99,61 +89,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ayarlar')),
+      appBar: AppBar(title: const Text(AppStrings.settings)),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(AppDimensions.spacingMd),
               children: [
-                _buildSectionTitle('Profil Ayarları'),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        TextField(
-                          controller: _usernameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Kullanıcı Adı',
-                            prefixIcon: Icon(Icons.person),
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _targetController,
-                          decoration: const InputDecoration(
-                            labelText: 'Günlük Kelime Hedefi',
-                            prefixIcon: const Icon(Icons.gps_fixed),
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 45,
-                          child: ElevatedButton(
-                            onPressed: _updateProfile,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blueAccent,
-                              foregroundColor: Colors.white,
-                            ),
-                            child: const Text('Değişiklikleri Kaydet'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                _buildSectionTitle('Hesap'),
+                _buildSectionTitle(AppStrings.profileSettings),
+                _buildProfileCard(),
+                const SizedBox(height: AppDimensions.spacingXl),
+                _buildSectionTitle(AppStrings.account),
                 Card(
                   child: ListTile(
-                    leading: const Icon(Icons.logout, color: Colors.red),
+                    leading: const Icon(Icons.logout, color: AppColors.red),
                     title: const Text(
-                      'Çıkış Yap',
-                      style: TextStyle(color: Colors.red),
+                      AppStrings.signOut,
+                      style: TextStyle(color: AppColors.red),
                     ),
                     onTap: _signOut,
                   ),
@@ -165,18 +116,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+      padding: const EdgeInsets.symmetric(
+        vertical: AppDimensions.spacingXs,
+        horizontal: 4.0,
+      ),
       child: Text(
         title,
         style: const TextStyle(
-          fontSize: 16,
+          fontSize: AppDimensions.fontSubtitle,
           fontWeight: FontWeight.bold,
-          color: Colors.grey,
+          color: AppColors.grey,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.paddingCard),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _usernameController,
+                validator: (v) => Validators.required(v, AppStrings.username),
+                decoration: const InputDecoration(
+                  labelText: AppStrings.username,
+                  prefixIcon: Icon(Icons.person),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: AppDimensions.spacingMd),
+              TextFormField(
+                controller: _targetController,
+                validator: Validators.number,
+                decoration: const InputDecoration(
+                  labelText: AppStrings.dailyTarget,
+                  prefixIcon: Icon(Icons.gps_fixed),
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: AppDimensions.spacingMd),
+              SizedBox(
+                width: double.infinity,
+                height: AppDimensions.buttonHeightXs,
+                child: ElevatedButton(
+                  onPressed: _updateProfile,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.seed,
+                    foregroundColor: AppColors.white,
+                  ),
+                  child: const Text(AppStrings.saveChanges),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
-// LoginScreen'e erişim için import eklemeyi unutmayın (main.dart üzerinden veya direkt)
-// import 'login_screen.dart';

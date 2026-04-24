@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/constants.dart';
 
 class ProgressScreen extends StatelessWidget {
   const ProgressScreen({super.key});
@@ -6,25 +7,30 @@ class ProgressScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Gelişimim')),
+      appBar: AppBar(title: const Text(AppStrings.myProgress)),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.trending_up, size: 100, color: Colors.orange),
-            const SizedBox(height: 20),
-            const Text(
-              'İstatistikler Modülü Yakında!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            const Icon(
+              Icons.trending_up,
+              size: AppDimensions.iconLg,
+              color: AppColors.orange,
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppDimensions.spacingLg),
             const Text(
-              'Burada öğrenme hızınız ve istatistikleriniz yer alacak.',
+              AppStrings.statsComingSoon,
+              style: TextStyle(
+                fontSize: AppDimensions.fontSubheading,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: AppDimensions.spacingSm),
+            const Text(AppStrings.statsDesc),
+            const SizedBox(height: AppDimensions.spacing2xl),
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Ana Menüye Dön'),
+              child: const Text(AppStrings.backToMenu),
             ),
           ],
         ),
