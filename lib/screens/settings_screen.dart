@@ -21,8 +21,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   AppSettings _settings = AppSettings();
   bool _loading = true;
   bool _saving = false;
-  bool _apiKeyVisible = false;
-  final TextEditingController _apiKeyController = TextEditingController();
 
   @override
   void initState() {
@@ -35,7 +33,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) {
       setState(() {
         _settings = settings;
-        _apiKeyController.text = settings.apiKey;
         _loading = false;
       });
     }
@@ -43,7 +40,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _saveSettings() async {
     setState(() => _saving = true);
-    _settings.apiKey = _apiKeyController.text.trim();
     await _settingsService.saveSettings(_settings);
     if (mounted) {
       setState(() => _saving = false);
@@ -58,7 +54,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
-    _apiKeyController.dispose();
     super.dispose();
   }
 
@@ -238,119 +233,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 32),
 
-                  ZenAnimations.staggeredEntrance(
-                    index: 4,
-                    child: const SectionHeader(title: 'AI Ayarları', icon: Icons.smart_toy_rounded),
-                  ),
-                  const SizedBox(height: 12),
-                  ZenAnimations.staggeredEntrance(
-                    index: 5,
-                    child: GlassCard(
-                      padding: EdgeInsets.zero,
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: ColorTokens.accent(context).withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(
-                                        Icons.key_outlined,
-                                        color: ColorTokens.accent(context),
-                                        size: 18,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Gemini API Anahtarı',
-                                            style: TextStyle(
-                                              color: ColorTokens.textPrimary(context),
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                          Text(
-                                            'Word Chain ve AI örnek cümleler için gerekli',
-                                            style: TextStyle(
-                                              color: ColorTokens.textSecondary(context),
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                TextField(
-                                  controller: _apiKeyController,
-                                  obscureText: !_apiKeyVisible,
-                                  style: TextStyle(
-                                    color: ColorTokens.textPrimary(context),
-                                    fontSize: 13,
-                                    fontFamily: 'monospace',
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'sk-...',
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _apiKeyVisible ? Icons.visibility_off : Icons.visibility,
-                                        color: ColorTokens.textSecondary(context),
-                                        size: 18,
-                                      ),
-                                      onPressed: () {
-                                        setState(() => _apiKeyVisible = !_apiKeyVisible);
-                                      },
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: ColorTokens.warning(context).withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: ColorTokens.warning(context).withValues(alpha: 0.3)),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.info_outline, color: ColorTokens.warning(context), size: 16),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          'API anahtarı cihazınızda güvenli şekilde saklanır',
-                                          style: TextStyle(
-                                            color: ColorTokens.warning(context),
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
 
                   ZenAnimations.staggeredEntrance(
                     index: 6,
