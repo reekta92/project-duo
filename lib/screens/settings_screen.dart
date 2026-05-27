@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import '../constants/constants.dart';
-import '../routes/app_routes.dart';
-import '../services/auth_service.dart';
-import '../services/user_service.dart';
-import '../utils/snackbar_helper.dart';
-import '../utils/validators.dart';
+import '../models/models.dart';
+import '../services/settings_service.dart';
+import '../theme/color_tokens.dart';
+import '../widgets/common_widgets.dart';
+import '../widgets/glass_app_bar.dart';
+import '../constants/app_dimensions.dart';
+import '../theme/animations.dart';
 
+/// Story-4: Ayarlar Menüsü
+/// Kullanıcı günlük yeni kelime sayısını ve diğer tercihlerini ayarlar
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -14,168 +17,444 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final _targetController = TextEditingController();
-  final _usernameController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
+  final SettingsService _settingsService = SettingsService();
+  AppSettings _settings = AppSettings();
+  bool _loading = true;
+  bool _saving = false;
+  bool _apiKeyVisible = false;
+  final TextEditingController _apiKeyController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _loadSettings();
   }
 
-  Future<void> _loadUserData() async {
-    setState(() => _isLoading = true);
-    try {
-      final user = AuthService.currentUser;
-      if (user == null) return;
-
-      final profile = await UserService.getProfile(user.id);
-
+  Future<void> _loadSettings() async {
+    final settings = await _settingsService.loadSettings();
+    if (mounted) {
       setState(() {
-        _targetController.text = profile.dailyTarget.toString();
-        _usernameController.text = profile.username;
+        _settings = settings;
+        _apiKeyController.text = settings.apiKey;
+        _loading = false;
       });
-    } catch (e) {
-      debugPrint('Veri yüklenirken hata oluştu: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _updateProfile() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-    try {
-      final user = AuthService.currentUser;
-      if (user == null) throw Exception('Kullanıcı oturumu bulunamadı.');
-
-      final newTarget = int.parse(_targetController.text.trim());
-
-      await UserService.updateProfile(
-        userId: user.id,
-        username: _usernameController.text.trim(),
-        dailyTarget: newTarget,
+  Future<void> _saveSettings() async {
+    setState(() => _saving = true);
+    _settings.apiKey = _apiKeyController.text.trim();
+    await _settingsService.saveSettings(_settings);
+    if (mounted) {
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Ayarlar kaydedildi ✓'),
+          backgroundColor: ColorTokens.accent(context),
+        ),
       );
-
-      if (!mounted) return;
-      SnackbarHelper.showSuccess(context, AppStrings.profileUpdated);
-      _loadUserData();
-    } catch (e) {
-      if (!mounted) return;
-      SnackbarHelper.showError(context, 'Güncelleme Hatası: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  Future<void> _signOut() async {
-    await AuthService.signOut();
-    if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
   }
 
   @override
   void dispose() {
-    _targetController.dispose();
-    _usernameController.dispose();
+    _apiKeyController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.settings)),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(AppDimensions.spacingMd),
-              children: [
-                _buildSectionTitle(AppStrings.profileSettings),
-                _buildProfileCard(),
-                const SizedBox(height: AppDimensions.spacingXl),
-                _buildSectionTitle(AppStrings.account),
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.logout, color: AppColors.red),
-                    title: const Text(
-                      AppStrings.signOut,
-                      style: TextStyle(color: AppColors.red),
-                    ),
-                    onTap: _signOut,
-                  ),
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: GlassAppBar(
+        title: 'Ayarlar',
+        automaticallyImplyLeading: false,
+        actions: [
+          if (_saving)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: ColorTokens.primary(context),
                 ),
-              ],
+              ),
+            )
+          else
+            TextButton.icon(
+              onPressed: _saveSettings,
+              icon: const Icon(Icons.check, size: 18),
+              label: const Text('Kaydet'),
+              style: TextButton.styleFrom(foregroundColor: ColorTokens.primary(context)),
+            ),
+        ],
+      ),
+      body: _loading
+          ? Center(child: CircularProgressIndicator(color: ColorTokens.primary(context)))
+          : SafeArea(
+              child: ListView(
+                padding: const EdgeInsets.only(
+                  left: AppDimensions.paddingPage,
+                  right: AppDimensions.paddingPage,
+                  top: AppDimensions.spacingMd,
+                  bottom: AppDimensions.bottomNavHeight + AppDimensions.spacing2xl,
+                ),
+                children: [
+                  ZenAnimations.staggeredEntrance(
+                    index: 0,
+                    child: const SectionHeader(title: 'Çalışma Ayarları', icon: Icons.school_rounded),
+                  ),
+                  const SizedBox(height: 12),
+                  ZenAnimations.staggeredEntrance(
+                    index: 1,
+                    child: GlassCard(
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SettingsRow(
+                                  icon: Icons.add_circle_outline,
+                                  title: 'Günlük Yeni Kelime Sayısı',
+                                  subtitle: 'Her gün kaç yeni kelime öğrenmek istiyorsunuz?',
+                                  trailing: Text(
+                                    '${_settings.dailyNewWordCount}',
+                                    style: TextStyle(
+                                      color: ColorTokens.primary(context),
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                SliderTheme(
+                                  data: SliderTheme.of(context).copyWith(
+                                    activeTrackColor: ColorTokens.primary(context),
+                                    inactiveTrackColor: ColorTokens.primary(context).withValues(alpha: 0.2),
+                                    thumbColor: ColorTokens.primary(context),
+                                    overlayColor: ColorTokens.primary(context).withValues(alpha: 0.1),
+                                    valueIndicatorColor: ColorTokens.primary(context),
+                                    valueIndicatorTextStyle: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  child: Slider(
+                                    value: _settings.dailyNewWordCount.toDouble(),
+                                    min: 5,
+                                    max: 50,
+                                    divisions: 9,
+                                    label: '${_settings.dailyNewWordCount} kelime',
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _settings.dailyNewWordCount = val.round();
+                                      });
+                                    },
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    _sliderLabel(context, '5 (Hafif)'),
+                                    _sliderLabel(context, '25 (Orta)'),
+                                    _sliderLabel(context, '50 (Yoğun)'),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  ZenAnimations.staggeredEntrance(
+                    index: 2,
+                    child: const SectionHeader(title: 'Bildirim Ayarları', icon: Icons.notifications_rounded),
+                  ),
+                  const SizedBox(height: 12),
+                  ZenAnimations.staggeredEntrance(
+                    index: 3,
+                    child: GlassCard(
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          SettingsRow(
+                            icon: Icons.notifications_outlined,
+                            iconColor: ColorTokens.warning(context),
+                            title: 'Bildirimler',
+                            subtitle: 'Günlük hatırlatıcılar',
+                            trailing: Switch(
+                              value: _settings.notificationsEnabled,
+                              onChanged: (val) {
+                                setState(() => _settings.notificationsEnabled = val);
+                              },
+                              activeThumbColor: ColorTokens.warning(context),
+                            ),
+                          ),
+                          AnimatedCrossFade(
+                            firstChild: const SizedBox.shrink(),
+                            secondChild: SettingsRow(
+                              icon: Icons.access_time,
+                              iconColor: ColorTokens.warning(context),
+                              title: 'Bildirim Saati',
+                              subtitle: _settings.notificationTime,
+                              trailing: TextButton(
+                                onPressed: _pickTime,
+                                child: Text(
+                                  'Değiştir',
+                                  style: TextStyle(color: ColorTokens.primary(context)),
+                                ),
+                              ),
+                            ),
+                            crossFadeState: _settings.notificationsEnabled
+                                ? CrossFadeState.showSecond
+                                : CrossFadeState.showFirst,
+                            duration: const Duration(milliseconds: 250),
+                          ),
+                          SettingsRow(
+                            icon: Icons.volume_up_outlined,
+                            iconColor: ColorTokens.accent(context),
+                            title: 'Ses Efektleri',
+                            subtitle: 'Doğru/yanlış ses bildirimleri',
+                            trailing: Switch(
+                              value: _settings.soundEnabled,
+                              onChanged: (val) {
+                                setState(() => _settings.soundEnabled = val);
+                              },
+                              activeThumbColor: ColorTokens.accent(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  ZenAnimations.staggeredEntrance(
+                    index: 4,
+                    child: const SectionHeader(title: 'AI Ayarları', icon: Icons.smart_toy_rounded),
+                  ),
+                  const SizedBox(height: 12),
+                  ZenAnimations.staggeredEntrance(
+                    index: 5,
+                    child: GlassCard(
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: ColorTokens.accent(context).withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        Icons.key_outlined,
+                                        color: ColorTokens.accent(context),
+                                        size: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Gemini API Anahtarı',
+                                            style: TextStyle(
+                                              color: ColorTokens.textPrimary(context),
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          Text(
+                                            'Word Chain ve AI örnek cümleler için gerekli',
+                                            style: TextStyle(
+                                              color: ColorTokens.textSecondary(context),
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                TextField(
+                                  controller: _apiKeyController,
+                                  obscureText: !_apiKeyVisible,
+                                  style: TextStyle(
+                                    color: ColorTokens.textPrimary(context),
+                                    fontSize: 13,
+                                    fontFamily: 'monospace',
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'sk-...',
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _apiKeyVisible ? Icons.visibility_off : Icons.visibility,
+                                        color: ColorTokens.textSecondary(context),
+                                        size: 18,
+                                      ),
+                                      onPressed: () {
+                                        setState(() => _apiKeyVisible = !_apiKeyVisible);
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: ColorTokens.warning(context).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: ColorTokens.warning(context).withValues(alpha: 0.3)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.info_outline, color: ColorTokens.warning(context), size: 16),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'API anahtarı cihazınızda güvenli şekilde saklanır',
+                                          style: TextStyle(
+                                            color: ColorTokens.warning(context),
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  ZenAnimations.staggeredEntrance(
+                    index: 6,
+                    child: const SectionHeader(title: 'Uygulama', icon: Icons.info_rounded),
+                  ),
+                  const SizedBox(height: 12),
+                  ZenAnimations.staggeredEntrance(
+                    index: 7,
+                    child: GlassCard(
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          SettingsRow(
+                            icon: Icons.info_outline,
+                            iconColor: ColorTokens.textMuted(context),
+                            title: 'Versiyon',
+                            trailing: Text(
+                              'v1.0.0',
+                              style: TextStyle(
+                                color: ColorTokens.textSecondary(context),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          SettingsRow(
+                            icon: Icons.school_outlined,
+                            iconColor: ColorTokens.primary(context),
+                            title: 'Tekrar Prensibi',
+                            subtitle: '6 kez üst üste doğru → 1 gün → 1 hafta → ...',
+                            trailing: Icon(
+                              Icons.chevron_right,
+                              color: ColorTokens.textMuted(context),
+                            ),
+                          ),
+                          SettingsRow(
+                            icon: Icons.delete_outline,
+                            iconColor: ColorTokens.error(context),
+                            title: 'Tüm Verileri Sıfırla',
+                            subtitle: 'İlerleme ve ayarlar silinir',
+                            trailing: TextButton(
+                              onPressed: _confirmReset,
+                              child: Text('Sıfırla', style: TextStyle(color: ColorTokens.error(context))),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: AppDimensions.spacingXs,
-        horizontal: 4.0,
-      ),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: AppDimensions.fontSubtitle,
-          fontWeight: FontWeight.bold,
-          color: AppColors.grey,
-        ),
-      ),
+  Widget _sliderLabel(BuildContext context, String text) {
+    return Text(
+      text,
+      style: TextStyle(color: ColorTokens.textMuted(context), fontSize: 10),
     );
   }
 
-  Widget _buildProfileCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimensions.paddingCard),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _usernameController,
-                validator: (v) => Validators.required(v, AppStrings.username),
-                decoration: const InputDecoration(
-                  labelText: AppStrings.username,
-                  prefixIcon: Icon(Icons.person),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: AppDimensions.spacingMd),
-              TextFormField(
-                controller: _targetController,
-                validator: Validators.number,
-                decoration: const InputDecoration(
-                  labelText: AppStrings.dailyTarget,
-                  prefixIcon: Icon(Icons.gps_fixed),
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: AppDimensions.spacingMd),
-              SizedBox(
-                width: double.infinity,
-                height: AppDimensions.buttonHeightXs,
-                child: ElevatedButton(
-                  onPressed: _updateProfile,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.seed,
-                    foregroundColor: AppColors.white,
-                  ),
-                  child: const Text(AppStrings.saveChanges),
-                ),
-              ),
-            ],
+  Future<void> _pickTime() async {
+    final parts = _settings.notificationTime.split(':');
+    final initial = TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 9,
+      minute: int.tryParse(parts[1]) ?? 0,
+    );
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _settings.notificationTime =
+            '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      });
+    }
+  }
+
+  Future<void> _confirmReset() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ColorTokens.glassBg(context),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Verileri Sıfırla', style: TextStyle(color: ColorTokens.textPrimary(context))),
+        content: Text(
+            'Tüm ilerleme ve ayarlarınız silinecek. Bu işlem geri alınamaz.',
+            style: TextStyle(color: ColorTokens.textSecondary(context))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('İptal', style: TextStyle(color: ColorTokens.textSecondary(context))),
           ),
-        ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Sıfırla', style: TextStyle(color: ColorTokens.error(context))),
+          ),
+        ],
       ),
     );
+    if (confirmed == true) {
+      await _settingsService.saveSettings(AppSettings());
+      await _loadSettings();
+    }
   }
 }
