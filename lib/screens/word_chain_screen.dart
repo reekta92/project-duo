@@ -6,6 +6,9 @@ import '../services/word_service.dart';
 import '../services/word_chain_service.dart';
 import '../services/llm_service.dart';
 import '../services/settings_service.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../theme/color_tokens.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/glass_app_bar.dart';
@@ -142,12 +145,30 @@ class _WordChainScreenState extends State<WordChainScreen>
     final user = AuthService.currentUser;
     if (user == null || _story == null) return;
 
+    String? savedImageUrl = _imageUrl;
+
+    // Görseli cihaza indir ve kaydet
+    if (_imageUrl != null && _imageUrl!.startsWith('http')) {
+      try {
+        final response = await http.get(Uri.parse(_imageUrl!));
+        if (response.statusCode == 200) {
+          final directory = await getApplicationDocumentsDirectory();
+          final fileName = 'word_chain_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          final file = File('${directory.path}/$fileName');
+          await file.writeAsBytes(response.bodyBytes);
+          savedImageUrl = file.path;
+        }
+      } catch (e) {
+        debugPrint('Görsel cihaza kaydedilemedi: $e');
+      }
+    }
+
     try {
       final chain = WordChain(
         userId: user.id,
         words: _usedWords,
         story: _story!,
-        imageUrl: _imageUrl,
+        imageUrl: savedImageUrl,
       );
       await _chainService.saveWordChain(chain);
       if (mounted) {
@@ -355,17 +376,21 @@ class _WordChainScreenState extends State<WordChainScreen>
                       const SizedBox(height: 20),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: Image.network(
-                          _imageUrl!,
-                          width: double.infinity,
-                          height: 250,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            height: 250,
-                            color: ColorTokens.border(context),
-                            child: Icon(Icons.broken_image_rounded, color: ColorTokens.textMuted(context)),
-                          ),
-                        ),
+                        child: _imageUrl!.startsWith('http')
+                            ? Image.network(
+                                _imageUrl!,
+                                width: double.infinity,
+                                height: 250,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => _errorImage(context),
+                              )
+                            : Image.file(
+                                File(_imageUrl!),
+                                width: double.infinity,
+                                height: 250,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => _errorImage(context),
+                              ),
                       ),
                     ],
                   ],
@@ -496,13 +521,21 @@ class _WordChainScreenState extends State<WordChainScreen>
                       const SizedBox(height: 12),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          chain.imageUrl!,
-                          width: double.infinity,
-                          height: 160,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                        ),
+                        child: chain.imageUrl!.startsWith('http')
+                            ? Image.network(
+                                chain.imageUrl!,
+                                width: double.infinity,
+                                height: 160,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                              )
+                            : Image.file(
+                                File(chain.imageUrl!),
+                                width: double.infinity,
+                                height: 160,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                              ),
                       ),
                     ],
                   ],
@@ -512,6 +545,14 @@ class _WordChainScreenState extends State<WordChainScreen>
           ),
         );
       },
+    );
+  }
+
+  Widget _errorImage(BuildContext context) {
+    return Container(
+      height: 250,
+      color: ColorTokens.border(context),
+      child: Icon(Icons.broken_image_rounded, color: ColorTokens.textMuted(context)),
     );
   }
 }

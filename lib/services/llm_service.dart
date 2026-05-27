@@ -10,27 +10,33 @@ class LLMService {
 
   void setApiKey(String key) => _apiKey = key;
 
-  /// Verilen İngilizce kelimelerden Türkçe hikaye oluşturur
+  /// Verilen İngilizce kelimelerden Türkçe hikaye oluşturur ve görsel için prompt üretir
   Future<Map<String, dynamic>> generateWordChain(List<String> words) async {
     if (_apiKey.isEmpty) {
       throw Exception(
           'Gemini API anahtarı ayarlanmamış. Lütfen Ayarlar ekranından API anahtarınızı girin.');
     }
 
-    final story = await _generateStory(words);
+    // 1. Hikayeyi ve görsel promptunu tek bir istekle oluştur (Kota tasarrufu için)
+    final result = await _generateStoryAndPrompt(words);
+    final story = result['story']!;
+    final imagePrompt = result['image_prompt']!;
+
+    // 2. Pollinations AI ile görsel URL'si oluştur
+    final encodedPrompt = Uri.encodeComponent(imagePrompt);
+    final imageUrl = 'https://image.pollinations.ai/prompt/$encodedPrompt?width=1024&height=1024&nologo=true';
 
     return {
       'story': story,
-      'image_url': null,
+      'image_url': imageUrl,
       'words': words,
     };
   }
 
-  Future<String> _generateStory(List<String> words) async {
+  Future<Map<String, String>> _generateStoryAndPrompt(List<String> words) async {
     final wordList = words.join(', ');
     final prompt = '''
 Aşağıdaki İngilizce kelimeleri kullanarak kısa, eğlenceli ve akılda kalıcı bir Türkçe hikaye yaz.
-Her kelimenin büyük harfli baş harfleri veya sonları hikayede korunmalı (örnek: BraiN gibi).
 Kelimeler: $wordList
 
 Kurallar:
@@ -40,7 +46,14 @@ Kurallar:
 - Türkçe yaz ama İngilizce kelimeleri koru
 - Akılda kalıcı ve eğlenceli olsun
 
-Sadece hikayeyi yaz, başka açıklama ekleme.
+Ayrıca, bu hikayeyi temel alarak görsel oluşturmak için kullanılabilecek kısa (maksimum 15 kelime) bir İNGİLİZCE görsel promptu (image prompt) da yaz. Prompt sadece görsel betimleme içermelidir (isim veya metin içermesin).
+
+Lütfen yanıtını AŞAĞIDAKİ GİBİ tam olarak şu formatta ver (başka hiçbir açıklama ekleme):
+HİKAYE:
+[buraya hikayeyi yaz]
+
+PROMPT:
+[buraya ingilizce promptu yaz]
 ''';
 
     final response = await http.post(
@@ -49,7 +62,7 @@ Sadece hikayeyi yaz, başka açıklama ekleme.
       body: jsonEncode({
         'system_instruction': {
           'parts': [
-            {'text': 'Sen bir dil öğretmenisin. Kelime ezberlemeye yardımcı olacak yaratıcı hikayeler yazarsın.'}
+            {'text': 'Sen yaratıcı bir yazarsın. İstikrarlı formatlarda yanıt verirsin.'}
           ]
         },
         'contents': [
@@ -63,20 +76,38 @@ Sadece hikayeyi yaz, başka açıklama ekleme.
     );
 
     if (response.statusCode == 429) {
-      throw Exception('Kota aşıldı. Gemini API ücretsiz kotası: 60 istek/dakika, 1500 istek/gün. Biraz bekleyip tekrar dene.');
+      throw Exception('Kota aşıldı! Çok hızlı istek attınız. Lütfen 1 dakika bekleyip tekrar deneyin.');
     }
     if (response.statusCode != 200) {
       final error = jsonDecode(response.body);
       final msg = error['error']?['message'] ?? 'Bilinmeyen hata';
       final status = response.statusCode;
       if (status == 400 && msg.contains('API_KEY')) {
-        throw Exception('Geçersiz API anahtarı. Google AI Studio\'dan (aistudio.google.com/apikey) AIza... ile başlayan anahtar al.');
+        throw Exception('Geçersiz API anahtarı. Lütfen kontrol edin.');
       }
       throw Exception('Gemini Hatası ($status): $msg');
     }
 
     final text = _extractTextFromResponse(response.bodyBytes);
-    return text.isEmpty ? 'Hikaye oluşturulamadı.' : text;
+    
+    // Parse response
+    String story = 'Hikaye oluşturulamadı.';
+    String imagePrompt = 'a magical story scene with characters in a fantasy world';
+    
+    if (text.contains('PROMPT:')) {
+      final parts = text.split('PROMPT:');
+      story = parts[0].replaceAll('HİKAYE:', '').trim();
+      if (parts.length > 1) {
+        imagePrompt = parts[1].trim();
+      }
+    } else {
+      story = text;
+    }
+
+    return {
+      'story': story.isEmpty ? 'Hikaye oluşturulamadı.' : story,
+      'image_prompt': imagePrompt.isEmpty ? 'a magical story scene' : imagePrompt,
+    };
   }
 
   /// Kelime için örnek cümle üret
