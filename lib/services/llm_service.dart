@@ -41,13 +41,6 @@ Kurallar:
 - Akılda kalıcı ve eğlenceli olsun
 
 Ayrıca, bu hikayeyi temel alarak görsel oluşturmak için kullanılabilecek kısa (maksimum 15 kelime) bir İNGİLİZCE görsel promptu (image prompt) da yaz. Prompt sadece görsel betimleme içermelidir (isim veya metin içermesin).
-
-Lütfen yanıtını AŞAĞIDAKİ GİBİ tam olarak şu formatta ver (başka hiçbir açıklama ekleme):
-HİKAYE:
-[buraya hikayeyi yaz]
-
-PROMPT:
-[buraya ingilizce promptu yaz]
 ''';
 
     try {
@@ -55,8 +48,9 @@ PROMPT:
         Uri.parse(_textUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
+          'response_format': {'type': 'json_object'},
           'messages': [
-            {'role': 'system', 'content': 'Sen yaratıcı bir yazarsın. İstikrarlı formatlarda yanıt verirsin.'},
+            {'role': 'system', 'content': 'Sen yaratıcı bir yazarsın. Lütfen sadece geçerli bir JSON objesi döndür. JSON anahtarları şunlar olmalıdır: "story" (Türkçe hikaye), "image_prompt" (İngilizce görsel prompt).'},
             {'role': 'user', 'content': prompt}
           ]
         }),
@@ -66,18 +60,16 @@ PROMPT:
         throw Exception('API Hatası (${response.statusCode})');
       }
 
-      final text = response.body; // Pollinations API direkt metin döner
-      
       String story = 'Hikaye oluşturulamadı.';
       String imagePrompt = 'a magical story scene with characters in a fantasy world';
-      
-      if (text.contains('PROMPT:')) {
-        final parts = text.split('PROMPT:');
-        story = parts[0].replaceAll('HİKAYE:', '').trim();
-        if (parts.length > 1) {
-          imagePrompt = parts[1].trim();
-        }
-      } else {
+
+      try {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        story = data['story'] ?? story;
+        imagePrompt = data['image_prompt'] ?? imagePrompt;
+      } catch (e) {
+        // Fallback for parsing error
+        final text = response.body;
         story = text;
       }
 
