@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../constants/constants.dart';
+import '../constants/app_strings.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
+import '../theme/color_tokens.dart';
 import '../utils/snackbar_helper.dart';
 import '../utils/validators.dart';
+import '../widgets/common_widgets.dart';
+import '../widgets/zen_background.dart';
+import '../widgets/glass_app_bar.dart';
+import '../theme/animations.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -65,110 +70,127 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.newAccount)),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppDimensions.paddingForm),
-          child: Card(
-            elevation: AppDimensions.elevationCard,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(AppDimensions.paddingForm),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: AppDimensions.spacingXl),
-                    TextFormField(
-                      controller: _usernameController,
-                      validator: (v) =>
-                          Validators.required(v, AppStrings.username),
-                      decoration: const InputDecoration(
-                        labelText: AppStrings.username,
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person),
-                      ),
-                    ),
-                    const SizedBox(height: AppDimensions.spacingMd),
-                    TextFormField(
-                      controller: _emailController,
-                      validator: Validators.email,
-                      decoration: const InputDecoration(
-                        labelText: AppStrings.emailLabel,
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.email),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: AppDimensions.spacingMd),
-                    TextFormField(
-                      controller: _passwordController,
-                      validator: Validators.password,
-                      decoration: const InputDecoration(
-                        labelText: AppStrings.password,
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.lock),
-                      ),
-                      obscureText: true,
-                    ),
-                    const SizedBox(height: AppDimensions.spacingXl),
-                    _isLoading
-                        ? const CircularProgressIndicator()
-                        : SizedBox(
-                            width: double.infinity,
-                            height: AppDimensions.buttonHeightSm,
-                            child: ElevatedButton(
-                              onPressed: _signUp,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.seed,
-                                foregroundColor: AppColors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    AppDimensions.radiusSm,
-                                  ),
-                                ),
-                              ),
-                              child: const Text(
-                                AppStrings.signUp,
-                                style: TextStyle(
-                                  fontSize: AppDimensions.fontButton,
-                                ),
-                              ),
-                            ),
+    return Stack(
+      children: [
+        const ZenBackground(),
+        Scaffold(
+          backgroundColor: Colors.transparent,
+          extendBodyBehindAppBar: true,
+          appBar: const GlassAppBar(
+            title: '',
+          ),
+          body: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: GlassCard(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(32),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ZenAnimations.staggeredEntrance(
+                          index: 0,
+                          child: _buildHeader(context),
+                        ),
+                        const SizedBox(height: 32),
+                        ZenAnimations.staggeredEntrance(
+                          index: 1,
+                          child: ZenTextField(
+                            controller: _usernameController,
+                            validator: (v) =>
+                                Validators.required(v, AppStrings.username),
+                            labelText: AppStrings.username,
+                            prefixIcon: Icons.person_rounded,
                           ),
-                  ],
+                        ),
+                        const SizedBox(height: 20),
+                        ZenAnimations.staggeredEntrance(
+                          index: 2,
+                          child: ZenTextField(
+                            controller: _emailController,
+                            validator: Validators.email,
+                            labelText: AppStrings.emailLabel,
+                            prefixIcon: Icons.email_rounded,
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        ZenAnimations.staggeredEntrance(
+                          index: 3,
+                          child: ZenTextField(
+                            controller: _passwordController,
+                            validator: Validators.password,
+                            labelText: AppStrings.password,
+                            prefixIcon: Icons.lock_rounded,
+                            obscureText: true,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        ZenAnimations.staggeredEntrance(
+                          index: 4,
+                          child: ZenButton(
+                            onPressed: _isLoading ? null : _signUp,
+                            label: AppStrings.signUp,
+                            color: ColorTokens.primary(context),
+                            isFullWidth: true,
+                            isLoading: _isLoading,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildHeader() {
-    return const Column(
+  Widget _buildHeader(BuildContext context) {
+    return Column(
       children: [
-        Icon(
-          Icons.person_add,
-          size: AppDimensions.iconMd,
-          color: AppColors.seed,
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: ColorTokens.primary(context).withValues(alpha: 0.15),
+            boxShadow: [
+              BoxShadow(
+                color: ColorTokens.primary(context).withValues(alpha: 0.2),
+                blurRadius: 16,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.person_add_rounded,
+            size: 40,
+            color: ColorTokens.primary(context),
+          ),
         ),
-        SizedBox(height: AppDimensions.spacingXl),
+        const SizedBox(height: 20),
         Text(
           AppStrings.joinUs,
           style: TextStyle(
-            fontSize: AppDimensions.fontSubheading,
-            fontWeight: FontWeight.bold,
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: ColorTokens.textPrimary(context),
           ),
         ),
-        SizedBox(height: AppDimensions.spacingXs),
-        Text(AppStrings.joinUsDesc, textAlign: TextAlign.center),
+        const SizedBox(height: 8),
+        Text(
+          AppStrings.joinUsDesc,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: ColorTokens.textSecondary(context),
+            fontSize: 14,
+          ),
+        ),
       ],
     );
   }

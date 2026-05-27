@@ -33,11 +33,28 @@ abstract class AppStrings {
   static const statsComingSoon = 'İstatistikler Modülü Yakında!';
   static const statsDesc =
       'Burada öğrenme hızınız ve istatistikleriniz yer alacak.';
-  static const backToMenu = 'Ana Menüye Dön';
+  static const backToMenu = 'Ana Sayfaya Dön';
   static const invalidEmail = 'Lütfen geçerli bir e-posta giriniz.';
   static const emptyPassword = 'Şifre boş olamaz.';
   static const shortPassword = 'Şifre en az 6 karakter olmalı.';
   static const emptyUsername = 'Kullanıcı adı boş olamaz.';
   static const invalidTarget = 'Lütfen geçerli bir hedef sayı giriniz.';
   static const defaultDailyTarget = 10;
+
+  // New strings
+  static const myWords = 'Kelimelerim';
+  static const wordle = 'Wordle';
+  static const wordChain = 'Word Chain';
+  static const quizToday = 'Bugünkü Quiz';
+  static const statsReport = 'Gelişim Raporu';
+  static const forgotPassword = 'Şifremi Unuttum';
+  static const addWord = 'Kelime Ekle';
+  static const noWords = 'Henüz kelime yok';
+  static const noQuizHistory = 'Henüz quiz geçmişi yok';
+
+  // Tab labels
+  static const tabHome = 'Ana Sayfa';
+  static const tabWords = 'Kelimeler';
+  static const tabGames = 'Oyunlar';
+  static const tabSettings = 'Ayarlar';
 }
