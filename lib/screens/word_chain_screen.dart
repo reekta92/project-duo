@@ -215,6 +215,60 @@ class _WordChainScreenState extends State<WordChainScreen>
     }
   }
 
+  void _showDetailDialog(String words, String story, String? imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ColorTokens.surfaceElevated(context),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.all(24),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  words,
+                  style: TextStyle(
+                    color: ColorTokens.primary(context),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  story,
+                  style: TextStyle(
+                    color: ColorTokens.textPrimary(context),
+                    fontSize: 15,
+                    height: 1.6,
+                  ),
+                ),
+                if (imageUrl != null) ...[
+                  const SizedBox(height: 24),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: imageUrl.startsWith('http')
+                        ? Image.network(imageUrl, fit: BoxFit.contain)
+                        : Image.file(File(imageUrl), fit: BoxFit.contain),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Kapat', style: TextStyle(color: ColorTokens.primary(context), fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _tabCtrl.dispose();
@@ -350,50 +404,61 @@ class _WordChainScreenState extends State<WordChainScreen>
           if (_story != null) ...[
             ZenAnimations.staggeredEntrance(
               index: 4,
-              child: GlassCard(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Oluşturulan Hikaye',
-                      style: TextStyle(
-                        color: ColorTokens.textPrimary(context),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+              child: GestureDetector(
+                onTap: () => _showDetailDialog(_usedWords.join(', '), _story!, _imageUrl),
+                child: GlassCard(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Oluşturulan Hikaye',
+                            style: TextStyle(
+                              color: ColorTokens.textPrimary(context),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Icon(Icons.open_in_full_rounded, size: 16, color: ColorTokens.textMuted(context)),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _story!,
-                      style: TextStyle(
-                        color: ColorTokens.textSecondary(context),
-                        fontSize: 15,
-                        height: 1.6,
+                      const SizedBox(height: 16),
+                      Text(
+                        _story!,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: ColorTokens.textSecondary(context),
+                          fontSize: 15,
+                          height: 1.6,
+                        ),
                       ),
-                    ),
-                    if (_imageUrl != null) ...[
-                      const SizedBox(height: 20),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: _imageUrl!.startsWith('http')
-                            ? Image.network(
-                                _imageUrl!,
-                                width: double.infinity,
-                                height: 250,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => _errorImage(context),
-                              )
-                            : Image.file(
-                                File(_imageUrl!),
-                                width: double.infinity,
-                                height: 250,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => _errorImage(context),
-                              ),
-                      ),
+                      if (_imageUrl != null) ...[
+                        const SizedBox(height: 20),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: _imageUrl!.startsWith('http')
+                              ? Image.network(
+                                  _imageUrl!,
+                                  width: double.infinity,
+                                  height: 250,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => _errorImage(context),
+                                )
+                              : Image.file(
+                                  File(_imageUrl!),
+                                  width: double.infinity,
+                                  height: 250,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => _errorImage(context),
+                                ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -480,65 +545,68 @@ class _WordChainScreenState extends State<WordChainScreen>
                 );
               },
               onDismissed: (_) => _deleteChain(chain.id!),
-              child: GlassCard(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            chain.words.join(', '),
-                            style: TextStyle(
-                              color: ColorTokens.primary(context),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+              child: GestureDetector(
+                onTap: () => _showDetailDialog(chain.words.join(', '), chain.story, chain.imageUrl),
+                child: GlassCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              chain.words.join(', '),
+                              style: TextStyle(
+                                color: ColorTokens.primary(context),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                        Text(
-                          date,
-                          style: TextStyle(
-                            color: ColorTokens.textMuted(context),
-                            fontSize: 12,
+                          Text(
+                            date,
+                            style: TextStyle(
+                              color: ColorTokens.textMuted(context),
+                              fontSize: 12,
+                            ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        chain.story,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: ColorTokens.textSecondary(context),
+                          fontSize: 14,
+                          height: 1.5,
+                        ),
+                      ),
+                      if (chain.imageUrl != null) ...[
+                        const SizedBox(height: 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: chain.imageUrl!.startsWith('http')
+                              ? Image.network(
+                                  chain.imageUrl!,
+                                  width: double.infinity,
+                                  height: 160,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                )
+                              : Image.file(
+                                  File(chain.imageUrl!),
+                                  width: double.infinity,
+                                  height: 160,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      chain.story,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: ColorTokens.textSecondary(context),
-                        fontSize: 14,
-                        height: 1.5,
-                      ),
-                    ),
-                    if (chain.imageUrl != null) ...[
-                      const SizedBox(height: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: chain.imageUrl!.startsWith('http')
-                            ? Image.network(
-                                chain.imageUrl!,
-                                width: double.infinity,
-                                height: 160,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                              )
-                            : Image.file(
-                                File(chain.imageUrl!),
-                                width: double.infinity,
-                                height: 160,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                              ),
-                      ),
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
